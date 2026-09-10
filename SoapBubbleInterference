@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soap Bubble Thin-Film Interference</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: #000; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  canvas { display: block; }
+
+  #title {
+    position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 17px; font-weight: 700; letter-spacing: .3px;
+    text-shadow: 0 1px 6px rgba(0,0,0,.9); pointer-events: none; white-space: nowrap;
+  }
+
+  #caption {
+    position: absolute; left: 16px; top: 18px;
+    color: #ddd; font-size: 11px; line-height: 1.35;
+    background: rgba(0,0,0,.62); border: 1px solid rgba(255,255,255,.13);
+    border-radius: 7px; padding: 7px 10px; pointer-events: none;
+  }
+
+  #info {
+    position: absolute; right: 16px; top: 18px; text-align: right;
+    color: #ddd; font-size: 11px; line-height: 1.5;
+    background: rgba(0,0,0,.62); border: 1px solid rgba(255,255,255,.13);
+    border-radius: 7px; padding: 7px 10px; pointer-events: none;
+  }
+  #info b { color: #fff; font-weight: 600; }
+
+  #panel {
+    position: absolute; left: 16px; bottom: 16px; width: 360px;
+    background: rgba(0,0,0,.66); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 9px; padding: 10px 14px 12px; color: #eee; font-size: 12px;
+    backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+    user-select: none;
+  }
+  #panel .row {
+    display: flex; align-items: center; gap: 8px; height: 22px; margin: 2px 0;
+  }
+  #panel .lbl {
+    width: 84px; flex: 0 0 84px; color: #cfcfcf; font-size: 11.5px;
+  }
+  #panel input[type=range] {
+    flex: 1 1 auto; -webkit-appearance: none; appearance: none;
+    height: 4px; border-radius: 2px; background: #3a3a3a; outline: none;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 13px; height: 13px;
+    border-radius: 50%; background: #7fc4ff; cursor: pointer;
+    border: 1px solid #1a1a1a;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #7fc4ff; cursor: pointer; border: 1px solid #1a1a1a;
+  }
+  #panel .val {
+    width: 52px; flex: 0 0 52px; text-align: right;
+    font-variant-numeric: tabular-nums; color: #fff; font-size: 11.5px;
+  }
+  #panel .sep { height: 1px; background: rgba(255,255,255,.12); margin: 8px 0 6px; }
+  #panel .checks { display: flex; gap: 18px; align-items: center; height: 22px; }
+  #panel .checks label {
+    display: flex; align-items: center; gap: 5px; cursor: pointer; color: #ddd;
+  }
+  #panel input[type=checkbox] { accent-color: #7fc4ff; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="title">Soap Bubble Thin-Film Interference</div>
+
+<div id="caption">
+  n_film = 1.33 &nbsp;|&nbsp; CIE 1931 2&deg; CMF &nbsp;|&nbsp; D65 (White Point)
+</div>
+
+<div id="info">
+  <div>Thickness: <b id="info-thick">—</b></div>
+  <div>Defect: <b id="info-defect">0 nm</b></div>
+</div>
+
+<div id="panel">
+  <div class="row">
+    <span class="lbl">&theta;L1</span>
+    <input id="s-theta1" type="range" min="-90" max="90" step="1" value="30">
+    <span class="val" id="v-theta1">30</span>
+  </div>
+  <div class="row">
+    <span class="lbl">&theta;L2</span>
+    <input id="s-theta2" type="range" min="-90" max="90" step="1" value="30">
+    <span class="val" id="v-theta2">30</span>
+  </div>
+  <div class="row">
+    <span class="lbl">ThickScale</span>
+    <input id="s-scale" type="range" min="0" max="2" step="0.05" value="0.5">
+    <span class="val" id="v-scale">0.50</span>
+  </div>
+  <div class="row">
+    <span class="lbl">EllipsoidH</span>
+    <input id="s-height" type="range" min="0" max="2" step="0.01" value="1">
+    <span class="val" id="v-height">1.00</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Gravity</span>
+    <input id="s-gravity" type="range" min="0" max="1" step="0.01" value="0.2">
+    <span class="val" id="v-gravity">0.20</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Defect (nm)</span>
+    <input id="s-defect" type="range" min="0" max="200" step="1" value="0">
+    <span class="val" id="v-defect">0</span>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="row checks">
+    <label><input type="checkbox" id="c-l1" checked> L1</label>
+    <label><input type="checkbox" id="c-l2"> L2</label>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ==================================================================
+   PHYSICAL PARAMETERS
+   ================================================================== */
+const N_FILM   = 1.33;
+const T_MIN0   = 50e-9;
+const T_MAX0   = 2000e-9;
+const R_SPHERE = 1.0;
+const N_U      = 180;
+const N_V      = 90;
+const T_MEAN   = (T_MIN0 + T_MAX0) / 2;
+
+/* ==================================================================
+   CIE 1931 2-DEGREE STANDARD OBSERVER  (5 nm intervals, 380..780 nm)
+   [ wavelength, xbar, ybar, zbar ]
+   ================================================================== */
+const CMF_DATA = [
+  [380, 0.001368, 0.000039, 0.006450],
+  [385, 0.002236, 0.000064, 0.010550],
+  [390, 0.004243, 0.000120, 0.020050],
+  [395, 0.007650, 0.000217, 0.036210],
+  [400, 0.014310, 0.000396, 0.067850],
+  [405, 0.023190, 0.000640, 0.110200],
+  [410, 0.043510, 0.001210, 0.207400],
+  [415, 0.077630, 0.002180, 0.371300],
+  [420, 0.134380, 0.004000, 0.645600],
+  [425, 0.214770, 0.007300, 1.039050],
+  [430, 0.283900, 0.011600, 1.385600],
+  [435, 0.328500, 0.016840, 1.622960],
+  [440, 0.348280, 0.023000, 1.747060],
+  [445, 0.348060, 0.029800, 1.782600],
+  [450, 0.336200, 0.038000, 1.772110],
+  [455, 0.318700, 0.048000, 1.744100],
+  [460, 0.290800, 0.060000, 1.669200],
+  [465, 0.251100, 0.073900, 1.528100],
+  [470, 0.195360, 0.090980, 1.287640],
+  [475, 0.142100, 0.112600, 1.041900],
+  [480, 0.095640, 0.139020, 0.812950],
+  [485, 0.057950, 0.169300, 0.616200],
+  [490, 0.032010, 0.208020, 0.465180],
+  [495, 0.014700, 0.258600, 0.353300],
+  [500, 0.004900, 0.323000, 0.272000],
+  [505, 0.002400, 0.407300, 0.212300],
+  [510, 0.009300, 0.503000, 0.158200],
+  [515, 0.029100, 0.608200, 0.111700],
+  [520, 0.063270, 0.710000, 0.078250],
+  [525, 0.109600, 0.793200, 0.057250],
+  [530, 0.165500, 0.862000, 0.042160],
+  [535, 0.225750, 0.914850, 0.029840],
+  [540, 0.290400, 0.954000, 0.020300],
+  [545, 0.359700, 0.980300, 0.013400],
+  [550, 0.433450, 0.994950, 0.008750],
+  [555, 0.512050, 1.000000, 0.005750],
+  [560, 0.594500, 0.995000, 0.003900],
+  [565, 0.678400, 0.978600, 0.002750],
+  [570, 0.762100, 0.952000, 0.002100],
+  [575, 0.842500, 0.915400, 0.001800],
+  [580, 0.916300, 0.870000, 0.001650],
+  [585, 0.978600, 0.816300, 0.001400],
+  [590, 1.026300, 0.757000, 0.001100],
+  [595, 1.056700, 0.694900, 0.001000],
+  [600, 1.062200, 0.631000, 0.000800],
+  [605, 1.045600, 0.566800, 0.000600],
+  [610, 1.002600, 0.503000, 0.000340],
+  [615, 0.938400, 0.441200, 0.000240],
+  [620, 0.854450, 0.381000, 0.000190],
+  [625, 0.751400, 0.321000, 0.000100],
+  [630, 0.642400, 0.265000, 0.000050],
+  [635, 0.541900, 0.217000, 0.000030],
+  [640, 0.447900, 0.175000, 0.000020],
+  [645, 0.360800, 0.138200, 0.000010],
+  [650, 0.283500, 0.107000, 0.000000],
+  [655, 0.218700, 0.081600, 0.000000],
+  [660, 0.164900, 0.061000, 0.000000],
+  [665, 0.121200, 0.044580, 0.000000],
+  [670, 0.087400, 0.032000, 0.000000],
+  [675, 0.063600, 0.023200, 0.000000],
+  [680, 0.046770, 0.017000, 0.000000],
+  [685, 0.032900, 0.011920, 0.000000],
+  [690, 0.022700, 0.008210, 0.000000],
+  [695, 0.015840, 0.005723, 0.000000],
+  [700, 0.011359, 0.004102, 0.000000],
+  [705, 0.008111, 0.002929, 0.000000],
+  [710, 0.005790, 0.002091, 0.000000],
+  [715, 0.004109, 0.001484, 0.000000],
+  [720, 0.002899, 0.001047, 0.000000],
+  [725, 0.002049, 0.000740, 0.000000],
+  [730, 0.001440, 0.000520, 0.000000],
+  [735, 0.001000, 0.000361, 0.000000],
+  [740, 0.000690, 0.000249, 0.000000],
+  [745, 0.000476, 0.000172, 0.000000],
+  [750, 0.000332, 0.000120, 0.000000],
+  [755, 0.000235, 0.000085, 0.000000],
+  [760, 0.000166, 0.000060, 0.000000],
+  [765, 0.000117, 0.000042, 0.000000],
+  [770, 0.000083, 0.000030, 0.000000],
+  [775, 0.000059, 0.000021, 0.000000],
+  [780, 0.000042, 0.000015, 0.000000]
+];
+
+/* ---- Resample CMF to 1 nm (380..780 nm, 401 samples) ---- */
+const LAM_MIN  = 380;
+const N_LAM    = 401;
+const D_LAMBDA = 1e-9;
+
+const cmfX = new Float64Array(N_LAM);
+const cmfY = new Float64Array(N_LAM);
+const cmfZ = new Float64Array(N_LAM);
+
+(function resampleCMF() {
+  const step = 5;
+  for (let i = 0; i < N_LAM; i++) {
+    const lam = LAM_MIN + i;
+    const t  = (lam - 380) / step;
+    let i0 = Math.floor(t);
+    if (i0 < 0) i0 = 0;
+    if (i0 > CMF_DATA.length - 2) i0 = CMF_DATA.length - 2;
+    const f = t - i0;
+    const a = CMF_DATA[i0], b = CMF_DATA[i0 + 1];
+    cmfX[i] = a[1] * (1 - f) + b[1] * f;
+    cmfY[i] = a[2] * (1 - f) + b[2] * f;
+    cmfZ[i] = a[3] * (1 - f) + b[3] * f;
+  }
+})();
+
+/* ==================================================================
+   OPD -> XYZ LOOKUP TABLE
+   sin^2(pi*OPD/lambda) = 0.5 - 0.5*cos(2*pi*OPD/lambda)
+   Table resolution: 1 nm, range 0..12800 nm
+   ================================================================== */
+const TABLE_MAX = 12800;
+const tableXYZ  = new Float32Array((TABLE_MAX + 1) * 3);
+
+(function buildLookupTable() {
+  const lambdas = new Float64Array(N_LAM);
+  for (let i = 0; i < N_LAM; i++) lambdas[i] = (LAM_MIN + i) * 1e-9;
+
+  const twoPi = 2 * Math.PI;
+  for (let k = 0; k <= TABLE_MAX; k++) {
+    const opd = k * 1e-9;
+    let X = 0, Y = 0, Z = 0;
+    for (let i = 0; i < N_LAM; i++) {
+      const I = 0.5 - 0.5 * Math.cos(twoPi * opd / lambdas[i]);
+      X += I * cmfX[i];
+      Y += I * cmfY[i];
+      Z += I * cmfZ[i];
+    }
+    tableXYZ[k * 3]     = X * D_LAMBDA;
+    tableXYZ[k * 3 + 1] = Y * D_LAMBDA;
+    tableXYZ[k * 3 + 2] = Z * D_LAMBDA;
+  }
+})();
+
+/* ==================================================================
+   SPHERE / ELLIPSOID MESH
+   ================================================================== */
+const numVerts = N_U * N_V;
+
+const uArr = new Float64Array(N_U);
+const vArr = new Float64Array(N_V);
+for (let i = 0; i < N_U; i++) uArr[i] = (i / (N_U - 1)) * 2 * Math.PI;
+for (let j = 0; j < N_V; j++) vArr[j] = (j / (N_V - 1)) * (Math.PI / 2);
+
+const Xb    = new Float32Array(numVerts);
+const Yb    = new Float32Array(numVerts);
+const Zb    = new Float32Array(numVerts);
+const tGrad = new Float32Array(numVerts);
+
+const posArr   = new Float32Array(numVerts * 3);
+const colArr   = new Float32Array(numVerts * 3);
+const alphaArr = new Float32Array(numVerts);
+
+for (let j = 0; j < N_V; j++) {
+  const v  = vArr[j];
+  const sv = Math.sin(v);
+  const cv = Math.cos(v);
+  for (let i = 0; i < N_U; i++) {
+    const idx = j * N_U + i;
+    const u   = uArr[i];
+    Xb[idx] = sv * Math.cos(u);
+    Yb[idx] = sv * Math.sin(u);
+    Zb[idx] = cv;
+    tGrad[idx] = T_MIN0 + (T_MAX0 - T_MIN0) * sv;
+
+    posArr[idx * 3]     = Xb[idx];
+    posArr[idx * 3 + 1] = Yb[idx];
+    posArr[idx * 3 + 2] = cv;
+  }
+}
+
+/* ---- Triangle indices ---- */
+const idxArr = new Uint32Array((N_U - 1) * (N_V - 1) * 6);
+let ii = 0;
+for (let j = 0; j < N_V - 1; j++) {
+  for (let i = 0; i < N_U - 1; i++) {
+    const a = j * N_U + i;
+    const b = a + 1;
+    const c = a + N_U;
+    const d = c + 1;
+    idxArr[ii++] = a; idxArr[ii++] = c; idxArr[ii++] = b;
+    idxArr[ii++] = b; idxArr[ii++] = c; idxArr[ii++] = d;
+  }
+}
+
+/* ==================================================================
+   SMOOTH RANDOM DEFECT FIELD  (low-frequency wave superposition)
+   ================================================================== */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function generateSmoothDefect(nv, nu, seed) {
+  const rng = mulberry32(seed);
+  const d   = new Float32Array(nv * nu);
+
+  const nWaves = 26;
+  for (let w = 0; w < nWaves; w++) {
+    const kx  = Math.floor(rng() * 6) + 1;
+    const ky  = Math.floor(rng() * 4) + 1;
+    const phx = rng() * Math.PI * 2;
+    const phy = rng() * Math.PI * 2;
+    const amp = 1.0 / (kx * kx + ky * ky + 1);
+
+    for (let j = 0; j < nv; j++) {
+      const v  = (j / (nv - 1)) * (Math.PI / 2);
+      const sy = Math.sin(ky * v + phy);
+      for (let i = 0; i < nu; i++) {
+        const u = (i / (nu - 1)) * Math.PI * 2;
+        d[j * nu + i] += amp * Math.sin(kx * u + phx) * sy;
+      }
+    }
+  }
+
+  let mx = 0;
+  for (let k = 0; k < d.length; k++) {
+    const a = Math.abs(d[k]);
+    if (a > mx) mx = a;
+  }
+  if (mx > 1e-12) {
+    for (let k = 0; k < d.length; k++) d[k] /= mx;
+  }
+  return d;
+}
+
+const defectField = generateSmoothDefect(N_V, N_U, 42);
+
+/* ==================================================================
+   COLOR / XYZ -> sRGB HELPERS
+   ================================================================== */
+function cctfEncode(c) {
+  if (c <= 0.0031308) {
+    const v = c * 12.92;
+    return v < 0 ? 0 : v;
+  }
+  const v = 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  return v > 1 ? 1 : v;
+}
+
+function xyzToSrgb(X, Y, Z, out, o) {
+  const r =  3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z;
+  const g = -0.9692660 * X + 1.8760108 * Y + 0.0415560 * Z;
+  const b =  0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z;
+  out[o]     = cctfEncode(r);
+  out[o + 1] = cctfEncode(g);
+  out[o + 2] = cctfEncode(b);
+}
+
+/* ==================================================================
+   STATE
+   ================================================================== */
+const state = {
+  theta1: 30,
+  theta2: 30,
+  scale: 0.5,
+  height: 1.0,
+  gravity: 0.2,
+  defect: 0,
+  on1: true,
+  on2: false
+};
+
+/* ==================================================================
+   THREE.JS SCENE
+   ================================================================== */
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.up.set(0, 0, 1);
+camera.position.set(3.6, 3.6, 3.0);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0.75);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 2.0;
+controls.maxDistance = 20.0;
+controls.update();
+
+/* ---- Lighting (for the arrows / helper geometry) ---- */
+scene.add(new THREE.AmbientLight(0xffffff, 1.6));
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+keyLight.position.set(6, 8, 12);
+scene.add(keyLight);
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.9);
+fillLight.position.set(-8, -4, 5);
+scene.add(fillLight);
+
+/* ---- Bubble mesh material ---- */
+const bubbleMat = new THREE.ShaderMaterial({
+  vertexShader: `
+    attribute vec3  aColor;
+    attribute float aAlpha;
+    varying   vec3  vColor;
+    varying   float vAlpha;
+    void main() {
+      vColor  = aColor;
+      vAlpha  = aAlpha;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec3  vColor;
+    varying float vAlpha;
+    void main() {
+      if (vAlpha < 0.5) discard;
+      gl_FragColor = vec4(vColor, 1.0);
+    }
+  `,
+  side: THREE.DoubleSide,
+  transparent: false
+});
+
+const bubbleGeo = new THREE.BufferGeometry();
+bubbleGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+bubbleGeo.setAttribute('aColor',   new THREE.BufferAttribute(colArr, 3));
+bubbleGeo.setAttribute('aAlpha',   new THREE.BufferAttribute(alphaArr, 1));
+bubbleGeo.setIndex(new THREE.BufferAttribute(idxArr, 1));
+bubbleGeo.computeBoundingSphere();
+
+const bubbleMesh = new THREE.Mesh(bubbleGeo, bubbleMat);
+scene.add(bubbleMesh);
+
+/* ---- Groups for dynamically rebuilt content ---- */
+const contourGroup = new THREE.Group();
+const arrowGroup   = new THREE.Group();
+const axisGroup    = new THREE.Group();
+scene.add(contourGroup, arrowGroup, axisGroup);
+
+function clearGroup(g) {
+  for (let i = g.children.length - 1; i >= 0; i--) {
+    const c = g.children[i];
+    g.remove(c);
+    c.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) {
+        if (Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+        else o.material.dispose();
+      }
+    });
+  }
+}
+
+/* ==================================================================
+   ARROW BUILDER
+   ================================================================== */
+function createArrow(start, dir, length, colorHex,
+                     shaftRadius = 0.025, headRadius = 0.08, headRatio = 0.18) {
+  const group = new THREE.Group();
+
+  const d = new THREE.Vector3(dir[0], dir[1], dir[2]);
+  if (d.lengthSq() < 1e-18) return group;
+  d.normalize();
+
+  const shaftLen = length * (1 - headRatio);
+  const headLen  = length * headRatio;
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: colorHex, roughness: 0.45, metalness: 0.15
+  });
+
+  const shaft = new THREE.Mesh(
+    new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLen, 12), mat
+  );
+  shaft.position.y = shaftLen * 0.5;
+  group.add(shaft);
+
+  const head = new THREE.Mesh(
+    new THREE.ConeGeometry(headRadius, headLen, 16), mat
+  );
+  head.position.y = shaftLen + headLen * 0.5;
+  group.add(head);
+
+  group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d);
+  group.position.set(start[0], start[1], start[2]);
+  return group;
+}
+
+/* ==================================================================
+   CONTOUR LINES
+   ================================================================== */
+function rebuildContours(h) {
+  clearGroup(contourGroup);
+  const mat  = new THREE.LineBasicMaterial({ color: 0x9a9a9a, transparent: true, opacity: 0.55 });
+  const mat2 = new THREE.LineBasicMaterial({ color: 0x9a9a9a, transparent: true, opacity: 0.32 });
+
+  /* --- base circle (equator, z = 0) --- */
+  {
+    const pts = [];
+    const phi = [];
+    for (let i = 0; i <= 64; i++) phi.push(i / 64 * Math.PI * 2);
+    for (const p of phi) pts.push(new THREE.Vector3(Math.cos(p), Math.sin(p), 0));
+    contourGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+  }
+
+  /* --- meridians --- */
+  const nMeridians = 8;
+  for (let m = 0; m < nMeridians; m++) {
+    const phi = 2 * Math.PI * m / nMeridians;
+    const pts = [];
+    const steps = 30;
+    for (let s = 0; s <= steps; s++) {
+      const theta = (s / steps) * (Math.PI / 2);
+      const st = Math.sin(theta);
+      pts.push(new THREE.Vector3(
+        st * Math.cos(phi),
+        st * Math.sin(phi),
+        Math.cos(theta) * h
+      ));
+    }
+    contourGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+  }
+
+  /* --- latitude circles --- */
+  for (const zLevel of [0.25, 0.5, 0.75]) {
+    const theta = Math.acos(zLevel);
+    const r = Math.sin(theta);
+    const pts = [];
+    for (let i = 0; i <= 48; i++) {
+      const p = i / 48 * Math.PI * 2;
+      pts.push(new THREE.Vector3(r * Math.cos(p), r * Math.sin(p), zLevel * h));
+    }
+    contourGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat2));
+  }
+}
+
+/* ==================================================================
+   AXIS TRIPOD
+   ================================================================== */
+function buildAxes() {
+  clearGroup(axisGroup);
+  const L = 1.8;
+  axisGroup.add(createArrow([0, 0, 0], [1, 0, 0], L, 0xff3030, 0.012, 0.045, 0.14));
+  axisGroup.add(createArrow([0, 0, 0], [0, 1, 0], L, 0x30ff40, 0.012, 0.045, 0.14));
+  axisGroup.add(createArrow([0, 0, 0], [0, 0, 1], L, 0x4080ff, 0.012, 0.045, 0.14));
+}
+buildAxes();
+
+/* ==================================================================
+   LIGHT ARROWS
+   ================================================================== */
+let lastArrowKey = '';
+
+function rebuildArrows(theta1Deg, theta2Deg, on1, on2) {
+  const key = `${theta1Deg}|${theta2Deg}|${on1}|${on2}`;
+  if (key === lastArrowKey) return;
+  lastArrowKey = key;
+
+  clearGroup(arrowGroup);
+
+  const th1 = theta1Deg * Math.PI / 180;
+  const th2 = theta2Deg * Math.PI / 180;
+
+  const dir1 = [-Math.sin(th1), 0, -Math.cos(th1)];
+  const dir2 = [-Math.sin(th2), 0, -Math.cos(th2)];
+
+  if (on1) {
+    for (const x0 of [-1.0, -0.5, 0.0, 0.5, 1.0]) {
+      arrowGroup.add(createArrow([x0, 0, 1.8], dir1, 0.8, 0xffff00));
+    }
+  }
+
+  if (on2) {
+    for (const x0 of [-1.0, -0.5, 0.0, 0.5, 1.0]) {
+      arrowGroup.add(createArrow([x0, 0.6, 1.8], dir2, 0.8, 0xff0000));
+    }
+  }
+}
+
+/* ==================================================================
+   MAIN COLOR / GEOMETRY UPDATE
+   ================================================================== */
+const xyzScratch = new Float32Array(numVerts * 3);
+
+function updateScene() {
+  const theta1   = state.theta1;
+  const theta2   = state.theta2;
+  const scale    = state.scale;
+  const h        = state.height;
+  const gravity  = state.gravity;
+  const defectNm = state.defect;
+  const on1      = state.on1;
+  const on2      = state.on2;
+
+  const th1 = theta1 * Math.PI / 180;
+  const th2 = theta2 * Math.PI / 180;
+
+  const ld1x = Math.sin(th1), ld1y = 0, ld1z = Math.cos(th1);
+  const ld2x = Math.sin(th2), ld2y = 0, ld2z = Math.cos(th2);
+
+  const defectAmp = defectNm * 1e-9;
+  const h2 = h * h;
+
+  /* ---------- per-vertex loop ---------- */
+  for (let j = 0; j < N_V; j++) {
+    for (let i = 0; i < N_U; i++) {
+      const idx = j * N_U + i;
+
+      const x  = Xb[idx];
+      const y  = Yb[idx];
+      const zb = Zb[idx];
+      const z  = zb * h;
+
+      posArr[idx * 3 + 2] = z;
+
+      /* ---- ellipsoid normal ---- */
+      let nx = x;
+      let ny = y;
+      let nz = (h !== 0) ? z / h2 : z;
+
+      const nl = Math.sqrt(nx * nx + ny * ny + nz * nz);
+      if (nl > 1e-12) {
+        const inv = 1 / nl;
+        nx *= inv; ny *= inv; nz *= inv;
+      } else {
+        nx = 0; ny = 0; nz = 1;
+      }
+
+      /* ---- local film thickness ---- */
+      let t = T_MEAN + gravity * (tGrad[idx] - T_MEAN);
+      t += defectAmp * defectField[idx];
+      t *= scale;
+      if (t < 1e-12) t = 1e-12;
+
+      let Xs = 0, Ys = 0, Zs = 0;
+      let visible = false;
+
+      /* ---- light 1 ---- */
+      if (on1) {
+        let d = nx * ld1x + ny * ld1y + nz * ld1z;
+        if (d >= 0) {
+          if (d > 1) d = 1;
+          const sinI = Math.sqrt(1 - d * d);
+          let sinT = sinI / N_FILM;
+          if (sinT > 1) sinT = 1;
+          const cosT = Math.sqrt(1 - sinT * sinT);
+          const opd  = 2 * N_FILM * t * cosT;
+
+          let k = Math.round(opd * 1e9);
+          if (k < 0) k = 0; else if (k > TABLE_MAX) k = TABLE_MAX;
+
+          Xs += tableXYZ[k * 3];
+          Ys += tableXYZ[k * 3 + 1];
+          Zs += tableXYZ[k * 3 + 2];
+          visible = true;
+        }
+      }
+
+      /* ---- light 2 ---- */
+      if (on2) {
+        let d = nx * ld2x + ny * ld2y + nz * ld2z;
+        if (d >= 0) {
+          if (d > 1) d = 1;
+          const sinI = Math.sqrt(1 - d * d);
+          let sinT = sinI / N_FILM;
+          if (sinT > 1) sinT = 1;
+          const cosT = Math.sqrt(1 - sinT * sinT);
+          const opd  = 2 * N_FILM * t * cosT;
+
+          let k = Math.round(opd * 1e9);
+          if (k < 0) k = 0; else if (k > TABLE_MAX) k = TABLE_MAX;
+
+          Xs += tableXYZ[k * 3];
+          Ys += tableXYZ[k * 3 + 1];
+          Zs += tableXYZ[k * 3 + 2];
+          visible = true;
+        }
+      }
+
+      xyzScratch[idx * 3]     = Xs;
+      xyzScratch[idx * 3 + 1] = Ys;
+      xyzScratch[idx * 3 + 2] = Zs;
+
+      alphaArr[idx] = visible ? 1.0 : 0.0;
+    }
+  }
+
+  /* ---------- global normalization ---------- */
+  let maxVal = 0;
+  for (let n = 0; n < numVerts; n++) {
+    const a = xyzScratch[n * 3];
+    const b = xyzScratch[n * 3 + 1];
+    const c = xyzScratch[n * 3 + 2];
+    if (a > maxVal) maxVal = a;
+    if (b > maxVal) maxVal = b;
+    if (c > maxVal) maxVal = c;
+  }
+
+  const normScale = (maxVal > 1e-12) ? (0.95 / maxVal) : 0;
+
+  /* ---------- XYZ -> sRGB ---------- */
+  if (normScale > 0) {
+    for (let n = 0; n < numVerts; n++) {
+      const o = n * 3;
+      const X = xyzScratch[o]     * normScale;
+      const Y = xyzScratch[o + 1] * normScale;
+      const Z = xyzScratch[o + 2] * normScale;
+      xyzToSrgb(X, Y, Z, colArr, o);
+    }
+  } else {
+    for (let n = 0; n < numVerts; n++) {
+      const o = n * 3;
+      colArr[o] = 0.5; colArr[o + 1] = 0.5; colArr[o + 2] = 0.5;
+    }
+  }
+
+  /* ---------- flag GPU uploads ---------- */
+  bubbleGeo.attributes.position.needsUpdate = true;
+  bubbleGeo.attributes.aColor.needsUpdate   = true;
+  bubbleGeo.attributes.aAlpha.needsUpdate   = true;
+
+  /* ---------- helpers ---------- */
+  rebuildContours(h);
+  rebuildArrows(theta1, theta2, on1, on2);
+
+  /* ---------- info text ---------- */
+  const tMinCur = (T_MEAN + gravity * (T_MIN0 - T_MEAN)) * scale;
+  const tMaxCur = (T_MEAN + gravity * (T_MAX0 - T_MEAN)) * scale;
+  document.getElementById('info-thick').textContent =
+    `${(tMinCur * 1e9).toFixed(1)} – ${(tMaxCur * 1e9).toFixed(1)} nm`;
+  document.getElementById('info-defect').textContent = `${defectNm} nm`;
+}
+
+/* ==================================================================
+   UI WIRING
+   ================================================================== */
+let pending = false;
+function requestUpdate() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => {
+    pending = false;
+    updateScene();
+  });
+}
+
+function bindSlider(id, valId, key, fmt) {
+  const el  = document.getElementById(id);
+  const out = document.getElementById(valId);
+  const apply = () => {
+    const v = parseFloat(el.value);
+    state[key] = v;
+    out.textContent = fmt(v);
+    requestUpdate();
+  };
+  el.addEventListener('input', apply);
+  out.textContent = fmt(parseFloat(el.value));
+}
+
+bindSlider('s-theta1',  'v-theta1',  'theta1',  v => v.toFixed(0));
+bindSlider('s-theta2',  'v-theta2',  'theta2',  v => v.toFixed(0));
+bindSlider('s-scale',   'v-scale',   'scale',   v => v.toFixed(2));
+bindSlider('s-height',  'v-height',  'height',  v => v.toFixed(2));
+bindSlider('s-gravity', 'v-gravity', 'gravity', v => v.toFixed(2));
+bindSlider('s-defect',  'v-defect',  'defect',  v => v.toFixed(0));
+
+document.getElementById('c-l1').addEventListener('change', e => {
+  state.on1 = e.target.checked;
+  requestUpdate();
+});
+document.getElementById('c-l2').addEventListener('change', e => {
+  state.on2 = e.target.checked;
+  requestUpdate();
+});
+
+/* ==================================================================
+   RESIZE
+   ================================================================== */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ==================================================================
+   RENDER LOOP
+   ================================================================== */
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+/* ==================================================================
+   INITIAL DRAW
+   ================================================================== */
+updateScene();
+animate();
+</script>
+</body>
+</html>
