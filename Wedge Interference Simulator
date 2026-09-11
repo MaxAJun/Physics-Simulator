@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interference in a Wedge-Shaped Film (Extended Source)</title>
+<style>
+  *,
+  *::before,
+  *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 28px 16px 48px;
+    background: #eef1f6;
+    color: #1f2430;
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .app {
+    max-width: 780px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #5b6472;
+    margin: 0 0 18px;
+  }
+
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 6px 22px rgba(20, 30, 60, 0.08);
+  }
+
+  .figure-title {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2b3445;
+    margin-bottom: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- plot area ---------- */
+  .plot-row {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .y-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    font-size: 12px;
+    color: #5b6472;
+  }
+
+  .canvas-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  canvas#field {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border: 1px solid #d7dbe3;
+    border-radius: 8px;
+    background: #000;
+  }
+
+  .x-label {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 12px;
+    color: #5b6472;
+  }
+
+  .colorbar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #5b6472;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .colorbar .bar {
+    flex: 1 1 auto;
+    width: 20px;
+    border: 1px solid #d7dbe3;
+    border-radius: 4px;
+    background: linear-gradient(to top, #000000, #ffffff);
+  }
+
+  /* ---------- controls ---------- */
+  .controls {
+    margin-top: 22px;
+    display: grid;
+    gap: 16px;
+  }
+
+  .control-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .control-name {
+    font-weight: 600;
+    color: #2b3445;
+  }
+
+  .control-value {
+    font-weight: 600;
+    color: #3b6ef5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: #3b6ef5;
+    cursor: pointer;
+  }
+
+  .footer-row {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  button {
+    border: 1px solid #d7dbe3;
+    background: #ffffff;
+    color: #2b3445;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  button:hover {
+    background: #f4f6fb;
+    border-color: #b9c2d4;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <h1>Interference in a Wedge-Shaped Film</h1>
+  <p class="subtitle">
+    Localized fringes produced by an extended (finite-width) line source. The intensity is computed
+    analytically, so no discrete-sampling artifacts appear. Drag the sliders to explore.
+  </p>
+
+  <div class="card">
+    <div class="figure-title" id="figureTitle"></div>
+
+    <div class="plot-row">
+      <div class="y-label">Y coordinate</div>
+
+      <div class="canvas-wrap">
+        <canvas id="field"></canvas>
+        <div class="x-label">X coordinate (direction of thickness variation)</div>
+      </div>
+
+      <div class="colorbar">
+        <span>1.0</span>
+        <div class="bar"></div>
+        <span>0.0</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control">
+        <div class="control-head">
+          <span class="control-name">Wedge angle &alpha;</span>
+          <span class="control-value" id="alphaOut">0.000 rad</span>
+        </div>
+        <input type="range" id="alpha" min="0" max="1.5" step="0.001" value="0">
+      </div>
+
+      <div class="control">
+        <div class="control-head">
+          <span class="control-name">Source width b</span>
+          <span class="control-value" id="bOut">0.00</span>
+        </div>
+        <input type="range" id="b" min="0" max="10" step="0.1" value="0">
+      </div>
+
+      <div class="control">
+        <div class="control-head">
+          <span class="control-name">Minimum thickness t&#8320;</span>
+          <span class="control-value" id="t0Out">1.0</span>
+        </div>
+        <input type="range" id="t0" min="0" max="10" step="0.1" value="1">
+      </div>
+    </div>
+
+    <div class="footer-row">
+      <button id="resetBtn" type="button">Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ==================== Physics parameters ==================== */
+  const WAVELENGTH = 1.0;   // Wavelength
+  const N          = 600;   // Image resolution
+  const SIZE       = 12.0;  // Half-width of the field of view
+  const F          = 30.0;  // Focal length of the lens
+
+  const K = 2 * Math.PI / WAVELENGTH;   // Wave number
+
+  /* ==================== Pre-computed grids ==================== */
+  // One-dimensional coordinate axis (identical for x and y)
+  const coord = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    coord[i] = -SIZE + (2 * SIZE) * i / (N - 1);
+  }
+
+  // Squared coordinates, used to build R^2 = X^2 + Y^2
+  const sq = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    sq[i] = coord[i] * coord[i];
+  }
+
+  // Angular factor under the lens imaging geometry:
+  //   cos(theta) = 1 / sqrt(1 + R^2 / F^2)
+  // Pre-computed for every pixel, since it never depends on the sliders.
+  const cosT = new Float32Array(N * N);
+  for (let j = 0; j < N; j++) {
+    const y2 = sq[j];
+    const base = j * N;
+    for (let i = 0; i < N; i++) {
+      cosT[base + i] = 1 / Math.sqrt(1 + (sq[i] + y2) / (F * F));
+    }
+  }
+
+  /* ==================== Canvas setup ==================== */
+  const canvas = document.getElementById('field');
+  canvas.width  = N;
+  canvas.height = N;
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(N, N);
+
+  /* ==================== Intensity computation ==================== */
+  /**
+   * Analytically computes the interference intensity of a line source of
+   * width b, which removes discrete-sampling artifacts completely.
+   */
+  function render(alpha, b, t0) {
+    const data = imageData.data;
+    const twoK = 2 * K;    // (2*pi/lambda) * 2
+    let p = 0;
+
+    for (let j = 0; j < N; j++) {
+      // origin = 'lower': the first canvas row holds the largest y value
+      const rowBase = (N - 1 - j) * N;
+
+      for (let i = 0; i < N; i++) {
+        const cosTheta = cosT[rowBase + i];
+
+        // Optical path-difference phase for a point source located at xs = 0
+        const phase = twoK * (t0 + alpha * coord[i]) * cosTheta;
+
+        // Visibility envelope caused by the extended source (sinc function).
+        // np.sinc(x_arg / pi) is exactly sin(x_arg) / x_arg.
+        const xArg = K * alpha * b * cosTheta;
+        const visibility = (xArg === 0) ? 1 : Math.sin(xArg) / xArg;
+
+        // Final intensity
+        let intensity = 0.5 * (1 - Math.cos(phase) * visibility);
+        if (intensity < 0) intensity = 0;
+        else if (intensity > 1) intensity = 1;
+
+        const v = (intensity * 255 + 0.5) | 0;
+        data[p++] = v;     // R
+        data[p++] = v;     // G
+        data[p++] = v;     // B
+        data[p++] = 255;   // A
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  /* ==================== UI wiring ==================== */
+  const alphaEl = document.getElementById('alpha');
+  const bEl     = document.getElementById('b');
+  const t0El    = document.getElementById('t0');
+
+  const alphaOut = document.getElementById('alphaOut');
+  const bOut     = document.getElementById('bOut');
+  const t0Out    = document.getElementById('t0Out');
+
+  const titleEl = document.getElementById('figureTitle');
+
+  let queued = false;
+
+  function update() {
+    const alpha = parseFloat(alphaEl.value);
+    const b     = parseFloat(bEl.value);
+    const t0    = parseFloat(t0El.value);
+
+    alphaOut.textContent = alpha.toFixed(3) + ' rad';
+    bOut.textContent     = b.toFixed(2);
+    t0Out.textContent    = t0.toFixed(1);
+
+    titleEl.textContent =
+      'F = ' + F.toFixed(1) +
+      ', t\u2080 = ' + t0.toFixed(1) +
+      ', \u03B1 = ' + alpha.toFixed(3) + ' rad' +
+      ', b = ' + b.toFixed(2);
+
+    render(alpha, b, t0);
+  }
+
+  // Throttle redraws to one per animation frame for smooth interaction
+  function scheduleUpdate() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () {
+      queued = false;
+      update();
+    });
+  }
+
+  [alphaEl, bEl, t0El].forEach(function (el) {
+    el.addEventListener('input', scheduleUpdate);
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    alphaEl.value = '0';
+    bEl.value     = '0';
+    t0El.value    = '1';
+    update();
+  });
+
+  /* ==================== Initial state ==================== */
+  update();
+})();
+</script>
+
+</body>
+</html>
